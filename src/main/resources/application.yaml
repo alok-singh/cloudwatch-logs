@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: ues-portal
+#  security:
+#    oauth2:
+#      client:
+#        registration:
+#          azure:
+#            client-id: "your-azure-client-id"
+#            client-secret: "your-azure-client-secret"
+#            scope:
+#              - openid
+#              - profile
+#              - email
+#        provider:
+#          azure:
+#            tenant-id: "your-tenant-id"
+
+app:
+  security:
+    enabled: true
+    allowed-domain: "mycompany.com"
+    jwt:
+      secret: "your-super-secret-key-that-is-at-least-256-bits-long"
+      expiration-ms: 3600000
+
+aws:
+  accessKey: ""
+  secretKey: ""
+  sessionToken: ""
+  region: "ap-southeast-1"
