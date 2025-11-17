@@ -25,6 +25,9 @@ public class CloudWatchServiceImpl implements CloudWatchService {
 
     @Override
     public List<Log> getLogs(CloudWatchRequest request) {
+        if (request.getLog_group_name_list() == null || request.getLog_group_name_list().isEmpty()) {
+            throw new IllegalArgumentException("log_group_name_list is required for this query_type");
+        }
         CloudWatchLogsClient logsClient = createLogsClient(request);
         List<Map<String, String>> results = executeCloudwatchQuery(logsClient, request.getLog_group_name_list().get(0), Long.parseLong(request.getStart_time()), Long.parseLong(request.getEnd_time()), request.getQuery());
         return results.stream()
@@ -41,6 +44,9 @@ public class CloudWatchServiceImpl implements CloudWatchService {
     @Override
     public Map<String, Object> retrieveConsolidatedTrigger(CloudWatchRequest request) {
         CloudWatchLogsClient logsClient = createLogsClient(request);
+        if (request.getLog_group_name_list() == null || request.getLog_group_name_list().isEmpty()) {
+            throw new IllegalArgumentException("log_group_name_list is required for this query_type");
+        }
         List<Map<String, String>> results = createQueryForDataSendTo3pp(logsClient, request.getQuery(), request.getLog_group_name_list().get(0), Long.parseLong(request.getStart_time()), Long.parseLong(request.getEnd_time()));
         return LogParser.parseConsolidatesResponse(results);
     }
