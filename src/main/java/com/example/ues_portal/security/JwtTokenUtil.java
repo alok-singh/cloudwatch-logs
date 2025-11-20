@@ -1,13 +1,17 @@
 package com.example.ues_portal.security;
 
+import com.example.ues_portal.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,11 +20,14 @@ import java.util.function.Function;
 @Component
 public class JwtTokenUtil {
 
-    @Value("${app.security.jwt.secret}")
-    private String secret;
+    private final SecretKey secretKey;
+    private final long expirationMs;
 
-    @Value("${app.security.jwt.expiration-ms}")
-    private long expirationMs;
+    public JwtTokenUtil(@Value("${app.security.jwt.secret}") String secret,
+                        @Value("${app.security.jwt.expiration-ms}") long expirationMs) {
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMs = expirationMs;
+    }
 
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
@@ -36,7 +43,7 @@ public class JwtTokenUtil {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+        return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
     }
 
     private Boolean isTokenExpired(String token) {
@@ -51,7 +58,11 @@ public class JwtTokenUtil {
 
     public String generateToken(OAuth2User oAuth2User) {
         Map<String, Object> claims = new HashMap<>();
-        return doGenerateToken(claims, oAuth2User.getAttribute("email"));
+        String email = oAuth2User.getAttribute("email");
+        if (email == null && oAuth2User instanceof User) {
+            email = ((User) oAuth2User).getEmail();
+        }
+        return doGenerateToken(claims, email);
     }
 
     private String doGenerateToken(Map<String, Object> claims, String subject) {
@@ -60,7 +71,7 @@ public class JwtTokenUtil {
                 .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(SignatureAlgorithm.HS512, secret)
+                .signWith(secretKey, SignatureAlgorithm.HS512)
                 .compact();
     }
 
@@ -71,6 +82,10 @@ public class JwtTokenUtil {
 
     public Boolean validateToken(String token, OAuth2User oAuth2User) {
         final String username = getUsernameFromToken(token);
-        return (username.equals(oAuth2User.getAttribute("email")) && !isTokenExpired(token));
+        String email = oAuth2User.getAttribute("email");
+        if (email == null && oAuth2User instanceof User) {
+            email = ((User) oAuth2User).getEmail();
+        }
+        return (username.equals(email) && !isTokenExpired(token));
     }
 }

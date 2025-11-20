@@ -5,12 +5,14 @@ import com.example.ues_portal.security.CustomOAuth2UserService;
 import com.example.ues_portal.security.OAuth2AuthenticationSuccessHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -27,20 +29,30 @@ public class SecurityConfig {
         this.securityEnabled = securityEnabled;
         this.azureClientId = azureClientId;
     }
+    @Autowired
+    private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+
+    @Autowired
+    private CustomOAuth2UserService customOAuth2UserService;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http,
-                                           OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
-                                           CustomOAuth2UserService customOAuth2UserService) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         if (securityEnabled && azureClientId != null && !azureClientId.isEmpty()) {
-            http.authorizeHttpRequests(auth -> auth.
-                    anyRequest().authenticated())
-                    .oauth2Login(oauth -> oauth
-                            .successHandler((request, response, authentication) -> {
-                                OAuth2User user = (OAuth2User) authentication.getPrincipal();
-                                log.debug("User Attributes: {}", user.getAttributes());
-                                response.sendRedirect("/logs");
-                            }));
+            http
+                .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/register", "/login").permitAll()
+                    .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                    .loginPage("/login")
+                    .permitAll()
+                )
+                .oauth2Login(oauth -> oauth
+                    .userInfoEndpoint(userInfo -> userInfo
+                        .oidcUserService(customOAuth2UserService)
+                    )
+                    .successHandler(oAuth2AuthenticationSuccessHandler)
+                );
         } else {
             http
                 .csrf(csrf -> csrf.disable())
@@ -49,5 +61,10 @@ public class SecurityConfig {
                 );
         }
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
