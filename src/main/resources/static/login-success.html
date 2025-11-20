@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Success</title>
+</head>
+<body>
+    <h1>Login Successful!</h1>
+    <h2>User Details:</h2>
+    <pre id="user-details"></pre>
+
+    <script>
+        const token = new URLSearchParams(window.location.search).get('token');
+        if (token) {
+            localStorage.setItem('jwt', token);
+            fetchUserDetails(token);
+        }
+
+        function fetchUserDetails(jwt) {
+            fetch('/api/me', {
+                headers: {
+                    'Authorization': `Bearer ${jwt}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('user-details').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                console.error('Error fetching user details:', error);
+                document.getElementById('user-details').textContent = 'Error fetching user details.';
+            });
+        }
+    </script>
+</body>
+</html>

@@ -15,5 +15,6 @@ import java.util.Map;
 public interface CloudWatchService {
     List<Log> getLogs(CloudWatchRequest request);
     Map<String, Object> retrieveConsolidatedTrigger(CloudWatchRequest request);
-    List<LogGroup> retrieveLogGroups(CloudWatchRequest request);
+    List<String> retrieveLogGroups(CloudWatchRequest request);
+    Map<String, String> generateAwsConfig(CloudWatchRequest request);
 }

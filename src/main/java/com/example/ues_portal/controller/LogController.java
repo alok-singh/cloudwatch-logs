@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import com.example.ues_portal.service.CloudWatchService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 
 import java.util.Collections;
 import java.util.List;
@@ -31,4 +32,11 @@ public class LogController {
     public List<Log> getCloudWatchLogs(@RequestBody CloudWatchRequest request) {
         return cloudWatchService.getLogs(request);
     }
+
+    
+  @GetMapping("/")
+    public String home(OAuth2AuthenticationToken authentication) {
+        return "Hello, " + authentication.getPrincipal().getAttribute("name");
+    }
+
 }

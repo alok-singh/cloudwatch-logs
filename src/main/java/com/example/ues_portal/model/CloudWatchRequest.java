@@ -15,19 +15,46 @@ public class CloudWatchRequest {
     private String start_time;
     private String end_time;
     private String query;
-    private String role;
     private String accessKey;
     private String secretKey;
     private String sessionToken;
     private String region;
+    private String role;
+    private String mfa_arn;
+    private String mfa_token;
+    private String profile;
 
     // Getters and setters
+    public String getProfile() {
+        return profile;
+    }
+
+    public void setProfile(String profile) {
+        this.profile = profile;
+    }
+
     public String getRole() {
         return role;
     }
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getMfa_arn() {
+        return mfa_arn;
+    }
+
+    public void setMfa_arn(String mfa_arn) {
+        this.mfa_arn = mfa_arn;
+    }
+
+    public String getMfa_token() {
+        return mfa_token;
+    }
+
+    public void setMfa_token(String mfa_token) {
+        this.mfa_token = mfa_token;
     }
 
     public String getAccessKey() {

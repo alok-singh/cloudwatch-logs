@@ -4,13 +4,17 @@ import com.example.ues_portal.model.CloudWatchRequest;
 import com.example.ues_portal.model.Log;
 import com.example.ues_portal.service.CloudWatchService;
 import com.example.ues_portal.util.LogParser;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatchlogs.CloudWatchLogsClient;
 import software.amazon.awssdk.services.cloudwatchlogs.model.*;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.GetSessionTokenRequest;
+import software.amazon.awssdk.services.sts.model.GetSessionTokenResponse;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -100,20 +104,61 @@ public class CloudWatchServiceImpl implements CloudWatchService {
     }
 
     @Override
-    public List<LogGroup> retrieveLogGroups(CloudWatchRequest request) {
+    public List<String> retrieveLogGroups(CloudWatchRequest request) {
         CloudWatchLogsClient logsClient = createLogsClient(request);
-        return logsClient.describeLogGroups().logGroups();
+        return logsClient.describeLogGroups().logGroups().stream()
+                .map(LogGroup::logGroupName)
+                .collect(Collectors.toList());
     }
 
     private CloudWatchLogsClient createLogsClient(CloudWatchRequest request) {
-        AwsSessionCredentials credentials = AwsSessionCredentials.create(
-                request.getAccessKey(),
-                request.getSecretKey(),
-                request.getSessionToken()
-        );
         return CloudWatchLogsClient.builder()
                 .region(Region.of(request.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .credentialsProvider(ProfileCredentialsProvider.create("aws-role"))
                 .build();
+    }
+
+    @Override
+    public Map<String, String> generateAwsConfig(CloudWatchRequest request) {
+        // Step 1: Create a base STS client with initial credentials
+        StsClient baseStsClient = StsClient.builder()
+                .region(Region.of(request.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(AwsSessionCredentials.create(
+                        request.getAccessKey(),
+                        request.getSecretKey(),
+                        request.getSessionToken()
+                )))
+                .build();
+
+        // Step 2: Get a session token using MFA
+        GetSessionTokenRequest sessionTokenRequest = GetSessionTokenRequest.builder()
+                .serialNumber(request.getMfa_arn())
+                .tokenCode(request.getMfa_token())
+                .build();
+        GetSessionTokenResponse sessionTokenResponse = baseStsClient.getSessionToken(sessionTokenRequest);
+
+        String credentialsFileContent = String.format(
+                "[mfa]\n" +
+                "aws_access_key_id = %s\n" +
+                "aws_secret_access_key = %s\n" +
+                "aws_session_token = %s\n",
+                sessionTokenResponse.credentials().accessKeyId(),
+                sessionTokenResponse.credentials().secretAccessKey(),
+                sessionTokenResponse.credentials().sessionToken()
+        );
+
+        String configFileContent = String.format(
+                "[profile aws-role]\n" +
+                "role_arn = %s\n" +
+                "source_profile = mfa\n" +
+                "region = %s\n",
+                request.getRole(),
+                request.getRegion()
+        );
+
+        return Map.of(
+                "credentials_file_content", credentialsFileContent,
+                "config_file_content", configFileContent
+        );
     }
 }

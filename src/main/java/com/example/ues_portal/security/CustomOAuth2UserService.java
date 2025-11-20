@@ -1,5 +1,6 @@
 package com.example.ues_portal.security;
 
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -18,9 +19,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         OAuth2User oAuth2User = super.loadUser(userRequest);
         String email = oAuth2User.getAttribute("email");
 
-        if (email == null || !email.toLowerCase().endsWith("@" + allowedDomain.toLowerCase())) {
-            throw new OAuth2AuthenticationException("Login failed: User's email domain is not allowed: " + email);
-        }
+//        if (email == null || !email.toLowerCase().endsWith("@" + allowedDomain.toLowerCase())) {
+//            throw new OAuth2AuthenticationException("Login failed: User's email domain is not allowed: " + email);
+//        }
 
         return oAuth2User;
     }
