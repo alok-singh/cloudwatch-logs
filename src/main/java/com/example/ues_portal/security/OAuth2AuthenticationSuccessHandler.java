@@ -20,10 +20,16 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
     @Autowired
     private final JwtTokenUtil jwtTokenUtil;
     private final String clientDomain;
+    private final String cookieDomain;
 
-    public OAuth2AuthenticationSuccessHandler(JwtTokenUtil jwtTokenUtil, @Value("${app.client.domain:}") String clientDomain) {
+    public OAuth2AuthenticationSuccessHandler(
+            JwtTokenUtil jwtTokenUtil,
+            @Value("${app.client-domain:}") String clientDomain,
+            @Value("${app.cookie-domain:}") String cookieDomain
+    ) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.clientDomain = clientDomain;
+        this.cookieDomain = cookieDomain;
     }
 
     @Override
@@ -35,6 +41,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setSecure(request.isSecure());
+        if (cookieDomain != null && !cookieDomain.isEmpty()) {
+            cookie.setDomain(cookieDomain);
+        }
         response.addCookie(cookie);
 
         String baseUrl = (clientDomain != null && !clientDomain.isEmpty()) ? clientDomain : "";

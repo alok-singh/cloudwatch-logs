@@ -36,8 +36,11 @@ public class AuthController {
     @Autowired
     private JwtTokenUtil jwtTokenUtil;
 
-    @Value("${app.client.domain:}")
+    @Value("${app.client-domain:}")
     private String clientDomain;
+
+    @Value("${app.cookie-domain:}")
+    private String cookieDomain;
 
     @PostMapping("/register")
     public User registerUser(@RequestBody User user) {
@@ -71,6 +74,9 @@ public class AuthController {
             cookie.setPath("/");
             cookie.setSecure(request.isSecure());
             cookie.setHttpOnly(true);
+            if (cookieDomain != null && !cookieDomain.isEmpty()) {
+                cookie.setDomain(cookieDomain);
+            }
             response.addCookie(cookie);
             return ResponseEntity.ok().build();
         } else {
@@ -80,12 +86,31 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-        Cookie cookie = new Cookie("token", null); // Set value to null to clear it
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(0); // Expire the cookie immediately
-        cookie.setSecure(request.isSecure()); // Match the secure flag of the original cookie
-        response.addCookie(cookie);
+        // Invalidate the session
+        request.getSession().invalidate();
+
+        // Clear the token cookie
+        Cookie tokenCookie = new Cookie("token", null);
+        tokenCookie.setPath("/");
+        tokenCookie.setHttpOnly(true);
+        tokenCookie.setMaxAge(0);
+        tokenCookie.setSecure(request.isSecure());
+        if (cookieDomain != null && !cookieDomain.isEmpty()) {
+            tokenCookie.setDomain(cookieDomain);
+        }
+        response.addCookie(tokenCookie);
+
+        // Clear the JSESSIONID cookie
+        Cookie jsessionidCookie = new Cookie("JSESSIONID", null);
+        jsessionidCookie.setPath("/");
+        jsessionidCookie.setHttpOnly(true);
+        jsessionidCookie.setMaxAge(0);
+        jsessionidCookie.setSecure(request.isSecure());
+        if (cookieDomain != null && !cookieDomain.isEmpty()) {
+            jsessionidCookie.setDomain(cookieDomain);
+        }
+        response.addCookie(jsessionidCookie);
+
         return ResponseEntity.ok().build();
     }
 }

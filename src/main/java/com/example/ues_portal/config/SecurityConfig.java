@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.boot.web.servlet.server.CookieSameSiteSupplier;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -36,7 +37,7 @@ import java.util.Collections;
      public SecurityConfig(
              @Value("${app.security.enabled:false}") boolean securityEnabled,
              @Value("${spring.security.oauth2.client.registration.azure.client-id:}") String azureClientId,
-             @Value("${app.client.domain:}") String clientDomain,
+             @Value("${app.client-domain:}") String clientDomain,
              @Value("${app.security.allowed-domain:}") String allowedDomain) {
          this.securityEnabled = securityEnabled;
          this.azureClientId = azureClientId;
