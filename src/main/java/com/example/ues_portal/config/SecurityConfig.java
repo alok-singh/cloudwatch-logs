@@ -14,23 +14,37 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.boot.web.servlet.server.CookieSameSiteSupplier;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 @Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    private static final Logger log = LogManager.getLogger(SecurityConfig.class);
-    private final boolean securityEnabled;
-    private final String azureClientId;
-
-    public SecurityConfig(
-            @Value("${app.security.enabled:false}") boolean securityEnabled,
-            @Value("${spring.security.oauth2.client.registration.azure.client-id:}") String azureClientId) {
-        this.securityEnabled = securityEnabled;
-        this.azureClientId = azureClientId;
-    }
-    @Autowired
-    private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+ @EnableWebSecurity
+ public class SecurityConfig {
+ 
+     private static final Logger log = LogManager.getLogger(SecurityConfig.class);
+     private final boolean securityEnabled;
+     private final String azureClientId;
+     private final String clientDomain;
+    private final String allowedDomain;
+ 
+     public SecurityConfig(
+             @Value("${app.security.enabled:false}") boolean securityEnabled,
+             @Value("${spring.security.oauth2.client.registration.azure.client-id:}") String azureClientId,
+             @Value("${app.client.domain:}") String clientDomain,
+             @Value("${app.security.allowed-domain:}") String allowedDomain) {
+         this.securityEnabled = securityEnabled;
+         this.azureClientId = azureClientId;
+         this.clientDomain = clientDomain;
+        this.allowedDomain = allowedDomain;
+     }
+     @Autowired
+     private OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
@@ -39,24 +53,23 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         if (securityEnabled && azureClientId != null && !azureClientId.isEmpty()) {
             http
-                .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/register", "/login").permitAll()
-                    .anyRequest().authenticated()
-                )
-                .formLogin(form -> form
-                    .loginPage("/login")
-                    .permitAll()
-                )
-                .oauth2Login(oauth -> oauth
-                    .userInfoEndpoint(userInfo -> userInfo
-                        .oidcUserService(customOAuth2UserService)
+                    .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                    .csrf(csrf -> csrf.disable())
+                    .authorizeHttpRequests(auth -> auth
+                            .requestMatchers("/api/auth/**", "/error").permitAll()
+                            .anyRequest().authenticated()
                     )
-                    .successHandler(oAuth2AuthenticationSuccessHandler)
-                );
+                    .oauth2Login(oauth -> oauth
+                            .userInfoEndpoint(userInfo -> userInfo
+                                    .oidcUserService(customOAuth2UserService)
+                            )
+                            .successHandler(oAuth2AuthenticationSuccessHandler)
+                    );
         } else {
             http
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(authz -> authz
+                    .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                    .csrf(csrf -> csrf.disable())
+                    .authorizeHttpRequests(authz -> authz
                     .anyRequest().permitAll()
                 );
         }
@@ -66,5 +79,22 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+    
+    @Bean
+    public CookieSameSiteSupplier applicationCookieSameSiteSupplier() {
+        return CookieSameSiteSupplier.ofLax();
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(clientDomain, allowedDomain));
+        configuration.setAllowedMethods(Collections.singletonList("*"));
+        configuration.setAllowedHeaders(Collections.singletonList("*"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

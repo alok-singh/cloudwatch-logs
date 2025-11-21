@@ -1,9 +1,5 @@
 server:
   port: 3000
-  servlet:
-    session:
-      cookie:
-        same-site: "lax"
 
 spring:
   security:
@@ -21,14 +17,27 @@ spring:
               - email
         provider:
           azure:
-            issuer-uri: "https://login.microsoftonline.com//v2.0"
+            issuer-uri: "https://login.microsoftonline.com/<<tenant_id>>/v2.0"
+            user-info-uri: "https://graph.microsoft.com/oidc/userinfo"
+            user-name-attribute: "sub"
+  datasource:
+    url: jdbc:mysql://localhost:3306/ues-portal
+    username:
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
 
 app:
+  client:
+    domain: "http://localhost:5000"
   security:
     enabled: true
     allowed-domain: "astro.com.my"
     jwt:
-      secret: "your-super-secret-key-that-is-at-least-256-bits-long"
+      secret: "z$C&F)J@NcRfUjXn2r5u8x/A?D(G-KaPdSgVkYp3s6v9y$B&E)H@MbQeThWmZq4t"
       expiration-ms: 3600000
 
 aws:

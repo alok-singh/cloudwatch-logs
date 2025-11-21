@@ -5,6 +5,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -17,7 +18,13 @@ import java.io.IOException;
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     @Autowired
-    private JwtTokenUtil jwtTokenUtil;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final String clientDomain;
+
+    public OAuth2AuthenticationSuccessHandler(JwtTokenUtil jwtTokenUtil, @Value("${app.client.domain:}") String clientDomain) {
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.clientDomain = clientDomain;
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
@@ -27,10 +34,11 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         Cookie cookie = new Cookie("token", jwt);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
-        // cookie.setSecure(true); // Enable in production
+        cookie.setSecure(request.isSecure());
         response.addCookie(cookie);
 
-        String redirectUrl = UriComponentsBuilder.fromUriString("/login-success.html")
+        String baseUrl = (clientDomain != null && !clientDomain.isEmpty()) ? clientDomain : "";
+        String redirectUrl = UriComponentsBuilder.fromUriString(baseUrl + "/gateway-apis/boa-logs")
                 .build().toUriString();
         response.sendRedirect(redirectUrl);
     }
